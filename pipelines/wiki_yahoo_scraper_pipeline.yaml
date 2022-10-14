@@ -1,0 +1,32 @@
+queues:
+  - name: SymbolQueue
+    description: contains symbols to be scraped from yahoo finance
+
+  - name: SqliteInserting
+    description: contains data that needs to be inserted to sqlite
+
+workers:
+  - name: WikiWorker
+    description: this scraps raw wikipedia page and pulls out symbols
+    location: workers.wiki_worker
+    class: WikiWorkerMasterScheduler
+    input_values:
+      - "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+    output_queues:
+      - SymbolQueue
+
+  - name: YahooFinanceWorker
+    description: pulls price data for a specific stock symbol from yahoo finance
+    location: workers.yahoo_finance_worker
+    class: YahooFinancePriceScheduler
+    instances: 20
+    input_queue: SymbolQueue
+    output_queues:
+      - SqliteInserting
+    
+  - name: SqliteWorker
+    description: take stock data and save in sqlite
+    location: workers.sqlite_worker
+    class: SqliteMasterScheduler
+    instances: 6
+    input_queue: SqliteInserting
